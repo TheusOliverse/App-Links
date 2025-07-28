@@ -26,13 +26,11 @@ export default function Add() {
             }
             await linkStorage.save({
                 id: new Date().getTime().toString(),
-                name, url,category
+                name, url, category
             })
-
-            const data = await linkStorage.get()
-            console.log(data)
+            Alert.alert("Salvo!", "Novo link adicionado.", [{text: "Ok", onPress: () => router.back()}])
         } catch (error) {
-            Alert.alert("Erro!", "Não foi possível salvar o link.")
+            Alert.alert("Erro!", "Não foi possível salvar o link.");
             console.log(error);
         }
 
@@ -54,7 +52,7 @@ export default function Add() {
 
             <View style={styles.form}>
                 <Input placeholder="Nome" placeholderTextColor={colors.gray[400]} onChangeText={setName} />
-                <Input placeholder="URL" placeholderTextColor={colors.gray[400]} onChangeText={setUrl} autoCapitalize="none"/>                <Button title="Adicionar" onPress={handleAdd} />
+                <Input placeholder="URL" placeholderTextColor={colors.gray[400]} onChangeText={setUrl} autoCapitalize="none" />                <Button title="Adicionar" onPress={handleAdd} />
             </View>
         </View>
     )

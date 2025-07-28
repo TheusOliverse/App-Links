@@ -1,16 +1,71 @@
-import { Text, View, Image, TouchableOpacity, FlatList, Modal } from "react-native"
+import { Text, View, Image, TouchableOpacity, FlatList, Modal, Alert, Linking } from "react-native"
 import { styles } from "./styles"
 import { MaterialIcons } from "@expo/vector-icons"
 import { colors } from "../../styles/colors"
 import { Categories } from "@/src/components/categories"
 import { Link } from "@/src/components/link"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import { Option } from "@/src/components/option"
-import { useState } from "react"
+import { useState, useCallback, use } from "react"
 import { categories } from "@/src/utils/categories"
+import { linkStorage, LinkStorage } from "@/src/storage/link-storage"
 
 export default function Index() {
+    const [showModal, setShowModal] = useState(false)
+
+    const [links, setLinks] = useState<LinkStorage[]>([])
+
     const [category, setCategory] = useState(categories[0].name)
+
+    const [link, setLink] = useState<LinkStorage>({} as LinkStorage)
+
+    async function getLinks() {
+        try {
+            const response = await linkStorage.get()
+            const filtered = response.filter((link) => link.category === category)
+            setLinks(filtered)
+        } catch (error) {
+            Alert.alert("Erro!", "Não foi possível listar os links.")
+        }
+    }
+ 
+    function handleDetail(selected: LinkStorage) {
+        setShowModal(true)
+        setLink(selected)
+    }
+
+    async function linkRemove() {
+        try {
+            await linkStorage.remove(link.id)
+            getLinks()
+            setShowModal(false)
+        } catch (error) {
+            Alert.alert("Erro!", "Não foi possível apagar.")
+            console.log(error)
+        }
+    }
+
+    async function handleOpen() {
+        try {
+            await Linking.openURL(link.url)
+            setShowModal(false)
+        } catch (error) {
+            Alert.alert("Erro!", "Não foi possível abrir o link.")
+            console.log(error)
+        }
+        useFocusEffect(
+            useCallback(()=>{
+                getLinks()
+            }, [category])
+        )
+    }
+
+    function handleRemove(selected: LinkStorage){
+        Alert.alert("Remoção", "Deseja apagar?", [{style: "cancel", text: "Não"}, {text: "sim", onPress: linkRemove}])
+    }
+
+    useFocusEffect(useCallback(() => {getLinks()}, [category]))
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -23,26 +78,27 @@ export default function Index() {
 
             <Categories selected={category} onChange={setCategory}/>
 
-            <FlatList data={["1", "2", "3"]} keyExtractor={item => item}
-                renderItem={() => (<Link name="MasterMind" url="URL usado aqui" onDetails={() => console.log("Clicou")} />)}
+            <FlatList data={links} keyExtractor={item => item.id}
+                renderItem={({item}) => (<Link name={item.name} url={item.url} onDetails={() => handleDetail(item)} />)}
                 style={styles.links} contentContainerStyle={styles.linksContent} />
 
-            <Modal transparent visible={false}>
+            <Modal transparent visible={showModal} animationType="slide">
                 <View style={styles.modal}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalCategory}>Item selecionado</Text>
-                            <TouchableOpacity>
+                            <Text style={styles.modalCategory}>{link.category}</Text>
+
+                            <TouchableOpacity onPress={() => setShowModal(false)}>
                                 <MaterialIcons name="close" size={20} color={colors.gray[400]} />
                             </TouchableOpacity>
                         </View>
 
-                        <Text style={styles.modalLinkName}>MasterMind</Text>
-                        <Text style={styles.modalUrl}>Descrição</Text>
+                        <Text style={styles.modalLinkName}>{link.name}</Text>
+                        <Text style={styles.modalUrl}>{link.url}</Text>
 
                         <View style={styles.modalFooter}>
-                            <Option name="Excluir" icon="delete" variant="secondary"></Option>
-                            <Option name="Abrir" icon="language" />
+                            <Option name="Excluir" icon="delete" variant="secondary" onPress={handleRemove} />
+                            <Option name="Abrir" icon="language" onPress={handleOpen}/>
                         </View>
                     </View>
                 </View>
